@@ -1,0 +1,12 @@
+[package]
+name = "niinku-sources"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+version.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+thiserror.workspace = true
+niinku-pipeline = { path = "../pipeline" }

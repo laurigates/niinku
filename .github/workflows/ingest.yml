@@ -1,0 +1,33 @@
+name: ingest corpora
+
+# Stage A (heavy, manual): re-crunch one or more raw corpora into cached
+# per-source frequency tables under data/cached/. Run when a corpus version
+# changes or a new source adapter lands — not per-build.
+
+on:
+  workflow_dispatch:
+    inputs:
+      sources:
+        description: "Comma-separated source names (opensubtitles,urbaani,mastodon,suomi24)"
+        required: true
+        default: "opensubtitles,urbaani"
+
+permissions:
+  contents: write
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Ingest
+        env:
+          SOURCES: ${{ inputs.sources }}
+        run: cargo run --release -p niinku-pipeline -- ingest --sources "$SOURCES"
+      - name: Commit cached tables
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore(data): refresh cached frequency tables"
+          file_pattern: data/cached/*

@@ -1,0 +1,2 @@
+# Tokens to drop unconditionally (typos, noise, slurs).
+# One token per line. Comments start with '#'.

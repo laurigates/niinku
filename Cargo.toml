@@ -1,0 +1,14 @@
+[workspace]
+resolver = "2"
+members = ["crates/pipeline", "crates/sources"]
+
+[workspace.package]
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/laurigates/niinku"
+authors = ["Lauri Gates"]
+version = "0.0.1"
+
+[workspace.dependencies]
+anyhow = "1"
+thiserror = "2"

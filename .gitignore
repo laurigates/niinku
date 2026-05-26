@@ -1,0 +1,5 @@
+/target
+/data/cached/*
+!/data/cached/.gitkeep
+*.dict
+/dist

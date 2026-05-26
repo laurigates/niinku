@@ -1,0 +1,42 @@
+name: assemble dictionary
+
+# Stage B (lightweight): merge cached + live sources, filter, score, emit a
+# `.combined` wordlist; open a PR for human review. The compiled `.dict` is
+# produced from a merged PR by the release-dict workflow (not yet authored).
+
+on:
+  schedule:
+    # Monthly, first day at 04:17 UTC.
+    - cron: "17 4 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  assemble:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Restore cached frequency tables
+        uses: actions/cache@v4
+        with:
+          path: data/cached
+          key: niinku-cached-${{ hashFiles('data/cached/**') }}
+          restore-keys: niinku-cached-
+      - name: Assemble wordlist
+        run: cargo run --release -p niinku-pipeline -- assemble
+      - name: Open PR with regenerated wordlist
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: auto/regenerate-wordlist
+          title: "chore: regenerate puhekieli wordlist"
+          body: |
+            Automated regeneration of the puhekieli/slang wordlist.
+
+            Review the new-vs-removed diff before merging.
+          add-paths: |
+            data/wordlist.combined

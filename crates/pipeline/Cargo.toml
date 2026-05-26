@@ -1,0 +1,19 @@
+[package]
+name = "niinku-pipeline"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+version.workspace = true
+
+[lib]
+name = "niinku_pipeline"
+path = "src/lib.rs"
+
+[[bin]]
+name = "niinku"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+thiserror.workspace = true
