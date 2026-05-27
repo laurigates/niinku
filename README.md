@@ -8,12 +8,12 @@ HeliBoard mechanism to consume it without manual re-imports.
 
 ## Status
 
-Pre-MVP. The pipeline crate's pure functions (merge, denylist, min-count,
-Voikko-based kirjakieli filter, log-scoring, `.combined` emit) are
-implemented and unit-tested. The `assemble` CLI is wired end-to-end with
-the OpenSubtitles + Urbaani adapters; Mastodon and Suomi24 adapters are
-still stubbed, and the `.combined` header / `.dict` compile step is still
-pending.
+MVP. The pipeline crate's pure functions (merge, denylist, min-count,
+Voikko-based kirjakieli filter, log-scoring, `.combined` header + body
+emit) are implemented and unit-tested. The `assemble` CLI is wired
+end-to-end with the OpenSubtitles + Urbaani adapters, and `compile`
+shells out to `dicttool_aosp.jar` to produce a HeliBoard-loadable
+`.dict`. Mastodon and Suomi24 adapters remain stubbed.
 
 ## Quick start
 
@@ -24,6 +24,7 @@ Prerequisites:
 - `libvoikko` and the Finnish morphology dictionary:
   - macOS: `brew install libvoikko`
   - Debian/Ubuntu: `sudo apt-get install libvoikko-dev voikko-fi`
+- Java (any JDK 11+) for the `.dict` compile step.
 
 ```
 just test          # cargo test --workspace
@@ -31,10 +32,21 @@ just lint          # fmt --check + clippy -D warnings
 just ci            # lint + test
 just build         # cargo build --release --workspace
 just download      # fetch OpenSubtitles Finnish frequency list into data/cached/
-just generate      # download (if needed) + assemble → data/out/niinku.combined
+just download-jar  # fetch dicttool_aosp.jar into tools/
+just generate      # download corpus + jar, assemble, compile → data/out/puhekieli_fi.dict
 just assemble      # run Stage B with custom flags (see `niinku assemble --help`)
+just compile       # run dicttool on data/out/niinku.combined
 just ingest        # run Stage A (currently a stub)
 ```
+
+The `.dict` file ships at `data/out/puhekieli_fi.dict`. To use it:
+
+1. Transfer to an Android device that has HeliBoard installed.
+2. Settings → Languages → Finnish → "Add dictionary from file" → select the `.dict`.
+
+The `dictionary=puhekieli:fi` header field declares this as an
+*additional* (non-`main`) Finnish dictionary, so HeliBoard loads it
+alongside its built-in `main_fi` rather than replacing it.
 
 ## Background
 
