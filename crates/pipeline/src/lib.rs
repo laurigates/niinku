@@ -84,6 +84,30 @@ pub fn apply_min_count(mut table: FreqTable, min_count: Count) -> FreqTable {
     table
 }
 
+/// A morphological judge — typically a thin wrapper around libvoikko, but
+/// the trait is left abstract so the pipeline stays pure and tests can
+/// drive a mock without requiring the Voikko C library.
+pub trait Lexicon {
+    /// Return `true` if `word` is a recognised standard-language form.
+    fn accepts(&self, word: &str) -> bool;
+}
+
+/// Drop tokens the lexicon accepts (those are kirjakieli, already covered
+/// by HeliBoard's `main_fi`) — keep tokens the lexicon rejects, since
+/// "frequent in colloquial corpus AND rejected by the standard-language
+/// morphology" is the puhekieli/slang signal. The allowlist overrides:
+/// listed tokens are kept even if accepted.
+pub fn apply_kirjakieli_filter<L: Lexicon>(
+    mut table: FreqTable,
+    lexicon: &L,
+    allowlist: &HashSet<String>,
+) -> FreqTable {
+    table
+        .counts
+        .retain(|word, _| allowlist.contains(word) || !lexicon.accepts(word));
+    table
+}
+
 /// A scored entry ready to emit.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Entry {
@@ -151,6 +175,24 @@ mod tests {
         items.iter().map(|s| s.to_string()).collect()
     }
 
+    /// Test lexicon backed by an explicit acceptance set — stand-in for
+    /// libvoikko so the pipeline's tests stay hermetic.
+    struct StaticLexicon {
+        accepted: HashSet<String>,
+    }
+
+    impl Lexicon for StaticLexicon {
+        fn accepts(&self, word: &str) -> bool {
+            self.accepted.contains(word)
+        }
+    }
+
+    fn lex(items: &[&str]) -> StaticLexicon {
+        StaticLexicon {
+            accepted: items.iter().map(|s| s.to_string()).collect(),
+        }
+    }
+
     #[test]
     fn insert_sums_duplicates() {
         let mut t = FreqTable::new();
@@ -214,6 +256,32 @@ mod tests {
         assert_eq!(entries[1].word, "common-twin");
         assert!(entries[0].freq >= entries[2].freq);
         assert_eq!(entries[3].word, "rare");
+    }
+
+    #[test]
+    fn kirjakieli_filter_drops_accepted_keeps_rejected() {
+        // kissa/koira are kirjakieli (accepted); mä/niinku are puhekieli
+        // (rejected).
+        let t = FreqTable::from_pairs([("kissa", 10), ("koira", 8), ("mä", 50), ("niinku", 20)]);
+        let l = lex(&["kissa", "koira"]);
+        let out = apply_kirjakieli_filter(t, &l, &HashSet::new());
+        assert_eq!(out.len(), 2);
+        assert_eq!(out.get("mä"), 50);
+        assert_eq!(out.get("niinku"), 20);
+        assert_eq!(out.get("kissa"), 0);
+    }
+
+    #[test]
+    fn allowlist_overrides_lexicon_acceptance() {
+        // läppä is technically accepted by the lexicon but we want to
+        // keep it as slang via the allowlist.
+        let t = FreqTable::from_pairs([("läppä", 30), ("kissa", 10)]);
+        let l = lex(&["läppä", "kissa"]);
+        let allow: HashSet<String> = ["läppä"].iter().map(|s| s.to_string()).collect();
+        let out = apply_kirjakieli_filter(t, &l, &allow);
+        assert_eq!(out.len(), 1);
+        assert_eq!(out.get("läppä"), 30);
+        assert_eq!(out.get("kissa"), 0);
     }
 
     #[test]
