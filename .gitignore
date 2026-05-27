@@ -4,3 +4,4 @@
 /data/out
 *.dict
 /dist
+/tools/*.jar
