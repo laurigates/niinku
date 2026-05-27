@@ -9,7 +9,7 @@
 //! intentionally not implemented yet — see Open questions in README.
 
 use std::collections::{HashMap, HashSet};
-use std::io::{self, Write};
+use std::io::{self, BufRead, Write};
 
 pub type Count = u64;
 
@@ -128,6 +128,21 @@ pub fn emit_combined_body(entries: &[Entry], w: &mut impl Write) -> io::Result<(
     Ok(())
 }
 
+/// Read one token per line from a denylist/allowlist file. Blank lines
+/// and lines starting with `#` are skipped; remaining lines are trimmed.
+pub fn read_token_list<R: BufRead>(reader: R) -> io::Result<HashSet<String>> {
+    let mut out = HashSet::new();
+    for line in reader.lines() {
+        let line = line?;
+        let t = line.trim();
+        if t.is_empty() || t.starts_with('#') {
+            continue;
+        }
+        out.insert(t.to_string());
+    }
+    Ok(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -199,6 +214,16 @@ mod tests {
         assert_eq!(entries[1].word, "common-twin");
         assert!(entries[0].freq >= entries[2].freq);
         assert_eq!(entries[3].word, "rare");
+    }
+
+    #[test]
+    fn read_token_list_skips_blanks_and_comments() {
+        let data = "# header\n\nmoro\n# mid\nläppä\n  spaced  \n";
+        let set = read_token_list(std::io::Cursor::new(data)).unwrap();
+        assert_eq!(set.len(), 3);
+        assert!(set.contains("moro"));
+        assert!(set.contains("läppä"));
+        assert!(set.contains("spaced"));
     }
 
     #[test]
