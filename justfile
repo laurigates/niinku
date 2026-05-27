@@ -95,6 +95,18 @@ compile: download-jar
         --combined data/out/niinku.combined \
         --output   data/out/puhekieli_fi.dict
 
+# Ingest Mastodon: pull Finnish-language posts from a public timeline,
+# tokenise, write data/cached/mastodon-fi.txt. INSTANCE / COUNT override
+# the defaults (mastodon.social / 1000 posts).
+[group: "pipeline"]
+ingest-mastodon:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    instance="${INSTANCE:-mastodon.social}"
+    count="${COUNT:-1000}"
+    cargo run --release -p niinku-cli -- ingest mastodon \
+        --instance "$instance" --count "$count"
+
 # End-to-end: download corpus + jar, assemble .combined, compile to .dict.
 [group: "pipeline"]
 generate: download download-jar
