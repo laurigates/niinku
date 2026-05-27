@@ -152,6 +152,37 @@ pub fn emit_combined_body(entries: &[Entry], w: &mut impl Write) -> io::Result<(
     Ok(())
 }
 
+/// HeliBoard `.combined` header. All five fields are required by
+/// `dicttool_aosp.jar`; any non-`main` `dict_type` makes this an
+/// additional dictionary loaded alongside HeliBoard's `main_fi`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CombinedHeader {
+    /// Dictionary kind. `main` substitutes the locale's primary dict;
+    /// any other string (e.g. `puhekieli`, `slang`, `emoji`) loads as
+    /// an additional dictionary.
+    pub dict_type: String,
+    /// Type-suffix locale, lowercased (e.g. `fi`).
+    pub dict_locale: String,
+    /// BCP 47 locale tag (e.g. `fi_FI`).
+    pub locale: String,
+    /// Human-readable label.
+    pub description: String,
+    /// Unix timestamp in seconds.
+    pub date: i64,
+    /// Integer version. HeliBoard accepts any value; stock AOSP needs >18.
+    pub version: u32,
+}
+
+/// Emit the single-line `.combined` header HeliBoard's loader expects:
+/// `dictionary=<type>:<dict_locale>,locale=<locale>,description=<desc>,date=<ts>,version=<v>`
+pub fn emit_combined_header(h: &CombinedHeader, w: &mut impl Write) -> io::Result<()> {
+    writeln!(
+        w,
+        "dictionary={}:{},locale={},description={},date={},version={}",
+        h.dict_type, h.dict_locale, h.locale, h.description, h.date, h.version
+    )
+}
+
 /// Read one token per line from a denylist/allowlist file. Blank lines
 /// and lines starting with `#` are skipped; remaining lines are trimmed.
 pub fn read_token_list<R: BufRead>(reader: R) -> io::Result<HashSet<String>> {
@@ -292,6 +323,24 @@ mod tests {
         assert!(set.contains("moro"));
         assert!(set.contains("läppä"));
         assert!(set.contains("spaced"));
+    }
+
+    #[test]
+    fn emit_combined_header_matches_heliboard_format() {
+        let h = CombinedHeader {
+            dict_type: "puhekieli".into(),
+            dict_locale: "fi".into(),
+            locale: "fi_FI".into(),
+            description: "Finnish puhekieli".into(),
+            date: 1716800000,
+            version: 1,
+        };
+        let mut buf = Vec::new();
+        emit_combined_header(&h, &mut buf).unwrap();
+        assert_eq!(
+            String::from_utf8(buf).unwrap(),
+            "dictionary=puhekieli:fi,locale=fi_FI,description=Finnish puhekieli,date=1716800000,version=1\n"
+        );
     }
 
     #[test]
