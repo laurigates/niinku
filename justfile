@@ -73,8 +73,33 @@ download:
     curl -fsSL "$url" -o "$out"
     echo "wrote $(wc -l < "$out") lines"
 
-# End-to-end: download (if needed) then assemble into data/out/niinku.combined.
+# Download dicttool_aosp.jar from remi0s/aosp-dictionary-tools.
 [group: "pipeline"]
-generate: download
+download-jar:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    mkdir -p tools
+    out=tools/dicttool_aosp.jar
+    if [[ -s "$out" ]]; then
+      echo "$out already present"
+      exit 0
+    fi
+    url=https://raw.githubusercontent.com/remi0s/aosp-dictionary-tools/master/dicttool_aosp.jar
+    echo "fetching $url -> $out"
+    curl -fsSL "$url" -o "$out"
+
+# Compile data/out/niinku.combined → data/out/puhekieli_fi.dict via dicttool.
+[group: "pipeline"]
+compile: download-jar
+    cargo run --release -p niinku-cli -- compile \
+        --combined data/out/niinku.combined \
+        --output   data/out/puhekieli_fi.dict
+
+# End-to-end: download corpus + jar, assemble .combined, compile to .dict.
+[group: "pipeline"]
+generate: download download-jar
     mkdir -p data/out
     cargo run --release -p niinku-cli -- assemble --output data/out/niinku.combined
+    cargo run --release -p niinku-cli -- compile \
+        --combined data/out/niinku.combined \
+        --output   data/out/puhekieli_fi.dict
