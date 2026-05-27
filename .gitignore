@@ -1,5 +1,6 @@
 /target
 /data/cached/*
 !/data/cached/.gitkeep
+/data/out
 *.dict
 /dist
