@@ -20,3 +20,4 @@ pub mod mastodon;
 pub mod opensubtitles;
 pub mod suomi24;
 pub mod urbaani;
+pub mod voikko;

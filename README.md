@@ -8,20 +8,31 @@ HeliBoard mechanism to consume it without manual re-imports.
 
 ## Status
 
-Pre-MVP scaffold. The pipeline crate's pure functions (merge, denylist,
-min-count, log-scoring, `.combined` emit) are implemented and unit-tested. All
-source adapters and the CLI subcommands are stubbed.
+Pre-MVP. The pipeline crate's pure functions (merge, denylist, min-count,
+Voikko-based kirjakieli filter, log-scoring, `.combined` emit) are
+implemented and unit-tested. The `assemble` CLI is wired end-to-end with
+the OpenSubtitles + Urbaani adapters; Mastodon and Suomi24 adapters are
+still stubbed, and the `.combined` header / `.dict` compile step is still
+pending.
 
 ## Quick start
 
-Prerequisites: a stable Rust toolchain (the workspace targets `edition = 2021`)
-and `just`.
+Prerequisites:
+
+- A stable Rust toolchain (the workspace targets `edition = 2021`).
+- `just`.
+- `libvoikko` and the Finnish morphology dictionary:
+  - macOS: `brew install libvoikko`
+  - Debian/Ubuntu: `sudo apt-get install libvoikko-dev voikko-fi`
 
 ```
 just test          # cargo test --workspace
 just lint          # fmt --check + clippy -D warnings
+just ci            # lint + test
 just build         # cargo build --release --workspace
-just assemble      # run Stage B (currently a stub)
+just download      # fetch OpenSubtitles Finnish frequency list into data/cached/
+just generate      # download (if needed) + assemble → data/out/niinku.combined
+just assemble      # run Stage B with custom flags (see `niinku assemble --help`)
 just ingest        # run Stage A (currently a stub)
 ```
 
