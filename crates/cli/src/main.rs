@@ -12,10 +12,12 @@ use std::process::ExitCode;
 
 use anyhow::{anyhow, Context, Result};
 use niinku_pipeline::{
-    apply_denylist, apply_min_count, emit_combined_body, merge, read_token_list, score_table,
-    Count, FreqTable,
+    apply_denylist, apply_kirjakieli_filter, apply_min_count, emit_combined_body, merge,
+    read_token_list, score_table, Count, FreqTable,
 };
-use niinku_sources::{opensubtitles::OpenSubtitles, urbaani::UrbaaniSanakirja, Source};
+use niinku_sources::{
+    opensubtitles::OpenSubtitles, urbaani::UrbaaniSanakirja, voikko::VoikkoLexicon, Source,
+};
 
 fn usage() {
     eprintln!(
@@ -23,6 +25,7 @@ fn usage() {
   niinku assemble [--data-dir DIR] [--output PATH] [--min-count N]
                   [--freq-min N] [--freq-max N]
                   [--no-opensubtitles] [--no-urbaani]
+                  [--no-voikko] [--voikko-dict-path PATH]
   niinku ingest <source>      (not yet implemented)
 "
     );
@@ -65,6 +68,8 @@ struct AssembleOpts {
     freq_max: u8,
     use_opensubtitles: bool,
     use_urbaani: bool,
+    use_voikko: bool,
+    voikko_dict_path: Option<String>,
 }
 
 impl Default for AssembleOpts {
@@ -77,6 +82,8 @@ impl Default for AssembleOpts {
             freq_max: 220,
             use_opensubtitles: true,
             use_urbaani: true,
+            use_voikko: true,
+            voikko_dict_path: None,
         }
     }
 }
@@ -112,6 +119,10 @@ fn parse_assemble_opts(args: &[String]) -> Result<AssembleOpts> {
             }
             "--no-opensubtitles" => opts.use_opensubtitles = false,
             "--no-urbaani" => opts.use_urbaani = false,
+            "--no-voikko" => opts.use_voikko = false,
+            "--voikko-dict-path" => {
+                opts.voikko_dict_path = Some(val(&mut i, "--voikko-dict-path")?)
+            }
             other => return Err(anyhow!("unknown flag: {other}")),
         }
         i += 1;
@@ -165,16 +176,34 @@ fn run_assemble(args: &[String]) -> Result<()> {
 
     let denylist = read_optional_token_list(&opts.data_dir.join("denylist.txt"))?;
     eprintln!("denylist: {} entries", denylist.len());
+    let allowlist = read_optional_token_list(&opts.data_dir.join("allowlist.txt"))?;
+    eprintln!("allowlist: {} entries", allowlist.len());
 
     let merged = merge(tables);
     eprintln!("merged: {} tokens", merged.len());
     let after_deny = apply_denylist(merged, &denylist);
-    let filtered = apply_min_count(after_deny, opts.min_count);
+    let after_min = apply_min_count(after_deny, opts.min_count);
     eprintln!(
         "after denylist + min-count>={}: {} tokens",
         opts.min_count,
-        filtered.len()
+        after_min.len()
     );
+
+    let filtered = if opts.use_voikko {
+        let lex = VoikkoLexicon::with_path(opts.voikko_dict_path.as_deref())
+            .context("initialising Voikko (pass --no-voikko to skip)")?;
+        let before = after_min.len();
+        let out = apply_kirjakieli_filter(after_min, &lex, &allowlist);
+        eprintln!(
+            "after voikko kirjakieli filter: {} tokens (dropped {})",
+            out.len(),
+            before - out.len()
+        );
+        out
+    } else {
+        eprintln!("skipping voikko filter (--no-voikko)");
+        after_min
+    };
 
     let entries = score_table(&filtered, opts.freq_min, opts.freq_max);
 
