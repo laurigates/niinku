@@ -1,9 +1,9 @@
 //! niinku: build a Finnish puhekieli/slang dictionary for HeliBoard.
 //!
 //! Three stages:
-//!   - `ingest`   — heavy, per-source corpus crunching → cached freq tables (stub)
-//!   - `assemble` — merge cached + live sources, filter, score, emit `.combined`
-//!   - `compile`  — invoke `dicttool_aosp.jar makedict` → `.dict`
+//!   - `ingest mastodon` — pull live posts, tokenise, cache the freq table
+//!   - `assemble`        — merge cached sources, filter, score, emit `.combined`
+//!   - `compile`         — invoke `dicttool_aosp.jar makedict` → `.dict`
 
 use std::collections::HashSet;
 use std::fs::{self, File};
@@ -18,7 +18,8 @@ use niinku_pipeline::{
     emit_combined_header, merge, read_token_list, score_table, CombinedHeader, Count, FreqTable,
 };
 use niinku_sources::{
-    opensubtitles::OpenSubtitles, urbaani::UrbaaniSanakirja, voikko::VoikkoLexicon, Source,
+    mastodon::Mastodon, mastodon_ingest, opensubtitles::OpenSubtitles, urbaani::UrbaaniSanakirja,
+    voikko::VoikkoLexicon, Source,
 };
 
 fn usage() {
@@ -26,12 +27,13 @@ fn usage() {
         "Usage:
   niinku assemble [--data-dir DIR] [--output PATH] [--min-count N]
                   [--freq-min N] [--freq-max N]
-                  [--no-opensubtitles] [--no-urbaani]
+                  [--no-opensubtitles] [--no-urbaani] [--no-mastodon]
                   [--no-voikko] [--voikko-dict-path PATH]
                   [--dict-type STR] [--dict-locale STR] [--locale STR]
                   [--description STR] [--version N]
   niinku compile  --combined PATH --output PATH [--jar PATH]
-  niinku ingest <source>      (not yet implemented)
+  niinku ingest mastodon [--instance HOST] [--language LANG]
+                         [--tags tag1,tag2,...] [--count N] [--output PATH]
 "
     );
 }
@@ -41,10 +43,7 @@ fn main() -> ExitCode {
     let result = match args.first().map(String::as_str) {
         Some("assemble") => run_assemble(&args[1..]),
         Some("compile") => run_compile(&args[1..]),
-        Some("ingest") => {
-            eprintln!("niinku ingest: not yet implemented");
-            return ExitCode::from(2);
-        }
+        Some("ingest") => run_ingest(&args[1..]),
         Some("-h") | Some("--help") | None => {
             usage();
             return ExitCode::SUCCESS;
@@ -74,6 +73,7 @@ struct AssembleOpts {
     freq_max: u8,
     use_opensubtitles: bool,
     use_urbaani: bool,
+    use_mastodon: bool,
     use_voikko: bool,
     voikko_dict_path: Option<String>,
     dict_type: String,
@@ -93,6 +93,7 @@ impl Default for AssembleOpts {
             freq_max: 220,
             use_opensubtitles: true,
             use_urbaani: true,
+            use_mastodon: true,
             use_voikko: true,
             voikko_dict_path: None,
             dict_type: "puhekieli".into(),
@@ -135,6 +136,7 @@ fn parse_assemble_opts(args: &[String]) -> Result<AssembleOpts> {
             }
             "--no-opensubtitles" => opts.use_opensubtitles = false,
             "--no-urbaani" => opts.use_urbaani = false,
+            "--no-mastodon" => opts.use_mastodon = false,
             "--no-voikko" => opts.use_voikko = false,
             "--voikko-dict-path" => {
                 opts.voikko_dict_path = Some(val(&mut i, "--voikko-dict-path")?)
@@ -190,6 +192,24 @@ fn run_assemble(args: &[String]) -> Result<()> {
         } else {
             eprintln!(
                 "skipping urbaani: {} not present (use --no-urbaani to silence)",
+                path.display()
+            );
+        }
+    }
+    if opts.use_mastodon {
+        let path = cached.join("mastodon-fi.txt");
+        if path.exists() {
+            eprintln!("loading mastodon from {}", path.display());
+            let src = Mastodon::new(&path);
+            let t = src
+                .fetch()
+                .with_context(|| format!("source '{}' failed", src.name()))?;
+            eprintln!("  {} tokens", t.len());
+            tables.push(t);
+        } else {
+            eprintln!(
+                "skipping mastodon: {} not present — run `niinku ingest mastodon` first \
+                 (or pass --no-mastodon to silence)",
                 path.display()
             );
         }
@@ -355,6 +375,106 @@ fn run_compile(args: &[String]) -> Result<()> {
             status
         ));
     }
+    eprintln!("wrote {}", opts.output.display());
+    Ok(())
+}
+
+fn run_ingest(args: &[String]) -> Result<()> {
+    match args.first().map(String::as_str) {
+        Some("mastodon") => run_ingest_mastodon(&args[1..]),
+        Some(other) => Err(anyhow!("unknown ingest source: {other}")),
+        None => Err(anyhow!(
+            "usage: niinku ingest <source>; supported sources: mastodon"
+        )),
+    }
+}
+
+#[derive(Debug)]
+struct MastodonIngestOpts {
+    instance: String,
+    language: String,
+    tags: Vec<String>,
+    count: usize,
+    output: PathBuf,
+}
+
+impl Default for MastodonIngestOpts {
+    fn default() -> Self {
+        Self {
+            instance: "mastodon.social".into(),
+            language: "fi".into(),
+            tags: vec!["suomi".into(), "finland".into(), "helsinki".into()],
+            count: 1000,
+            output: PathBuf::from("data/cached/mastodon-fi.txt"),
+        }
+    }
+}
+
+fn parse_mastodon_ingest_opts(args: &[String]) -> Result<MastodonIngestOpts> {
+    let mut opts = MastodonIngestOpts::default();
+    let mut i = 0;
+    while i < args.len() {
+        let a = &args[i];
+        let val = |i: &mut usize, flag: &str| -> Result<String> {
+            *i += 1;
+            args.get(*i)
+                .cloned()
+                .ok_or_else(|| anyhow!("{flag}: missing value"))
+        };
+        match a.as_str() {
+            "--instance" => opts.instance = val(&mut i, "--instance")?,
+            "--language" => opts.language = val(&mut i, "--language")?,
+            "--tags" => {
+                opts.tags = val(&mut i, "--tags")?
+                    .split(',')
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty())
+                    .collect();
+            }
+            "--count" => {
+                opts.count = val(&mut i, "--count")?
+                    .parse()
+                    .context("--count: not a usize")?
+            }
+            "--output" | "-o" => opts.output = PathBuf::from(val(&mut i, "--output")?),
+            other => return Err(anyhow!("unknown flag: {other}")),
+        }
+        i += 1;
+    }
+    Ok(opts)
+}
+
+fn run_ingest_mastodon(args: &[String]) -> Result<()> {
+    let opts = parse_mastodon_ingest_opts(args)?;
+    eprintln!(
+        "ingesting up to {} posts from {} hashtag streams [{}] (language={})",
+        opts.count,
+        opts.instance,
+        opts.tags.join(", "),
+        opts.language
+    );
+
+    let table = mastodon_ingest::fetch_and_count(
+        &opts.instance,
+        &opts.language,
+        &opts.tags,
+        opts.count,
+        |fetched, target| eprintln!("  fetched {fetched}/{target}"),
+    )?;
+    eprintln!(
+        "tokenised {} unique tokens (raw post text discarded)",
+        table.len()
+    );
+
+    if let Some(parent) = opts.output.parent() {
+        fs::create_dir_all(parent).with_context(|| format!("creating {}", parent.display()))?;
+    }
+    let mut w = BufWriter::new(
+        File::create(&opts.output)
+            .with_context(|| format!("creating {}", opts.output.display()))?,
+    );
+    mastodon_ingest::write_freq_table(&table, &mut w)?;
+    w.flush()?;
     eprintln!("wrote {}", opts.output.display());
     Ok(())
 }

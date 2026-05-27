@@ -17,7 +17,9 @@ pub trait Source {
 }
 
 pub mod mastodon;
+pub mod mastodon_ingest;
 pub mod opensubtitles;
 pub mod suomi24;
+pub mod tokenize;
 pub mod urbaani;
 pub mod voikko;

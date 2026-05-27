@@ -11,9 +11,10 @@ HeliBoard mechanism to consume it without manual re-imports.
 MVP. The pipeline crate's pure functions (merge, denylist, min-count,
 Voikko-based kirjakieli filter, log-scoring, `.combined` header + body
 emit) are implemented and unit-tested. The `assemble` CLI is wired
-end-to-end with the OpenSubtitles + Urbaani adapters, and `compile`
-shells out to `dicttool_aosp.jar` to produce a HeliBoard-loadable
-`.dict`. Mastodon and Suomi24 adapters remain stubbed.
+end-to-end with the OpenSubtitles, Urbaani, and Mastodon adapters;
+`ingest mastodon` pulls fresh Finnish posts from public hashtag
+streams; `compile` shells out to `dicttool_aosp.jar` to produce a
+HeliBoard-loadable `.dict`. Only the Suomi24 adapter remains stubbed.
 
 ## Quick start
 
@@ -36,7 +37,8 @@ just download-jar  # fetch dicttool_aosp.jar into tools/
 just generate      # download corpus + jar, assemble, compile → data/out/puhekieli_fi.dict
 just assemble      # run Stage B with custom flags (see `niinku assemble --help`)
 just compile       # run dicttool on data/out/niinku.combined
-just ingest        # run Stage A (currently a stub)
+just ingest-mastodon # pull Finnish hashtag posts → data/cached/mastodon-fi.txt
+just ingest        # pass through to the CLI (e.g. `just ingest mastodon --tags suomi`)
 ```
 
 The `.dict` file ships at `data/out/puhekieli_fi.dict`. To use it:
