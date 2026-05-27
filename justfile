@@ -35,6 +35,10 @@ lint:
 fmt:
     cargo fmt --all
 
+# Run every check that CI runs (fmt + clippy + test).
+[group: "quality"]
+ci: lint test
+
 ##########
 # Pipeline
 ##########
