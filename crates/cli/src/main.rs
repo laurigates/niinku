@@ -18,8 +18,8 @@ use niinku_pipeline::{
     emit_combined_header, merge, read_token_list, score_table, CombinedHeader, Count, FreqTable,
 };
 use niinku_sources::{
-    mastodon::Mastodon, mastodon_ingest, opensubtitles::OpenSubtitles, urbaani::UrbaaniSanakirja,
-    voikko::VoikkoLexicon, Source,
+    curated::Curated, mastodon::Mastodon, mastodon_ingest, opensubtitles::OpenSubtitles,
+    urbaani::UrbaaniSanakirja, voikko::VoikkoLexicon, Source,
 };
 
 fn usage() {
@@ -27,8 +27,8 @@ fn usage() {
         "Usage:
   niinku assemble [--data-dir DIR] [--output PATH] [--min-count N]
                   [--freq-min N] [--freq-max N]
-                  [--no-opensubtitles] [--no-urbaani] [--no-mastodon]
-                  [--no-voikko] [--voikko-dict-path PATH]
+                  [--no-curated] [--no-opensubtitles] [--no-urbaani]
+                  [--no-mastodon] [--no-voikko] [--voikko-dict-path PATH]
                   [--dict-type STR] [--dict-locale STR] [--locale STR]
                   [--description STR] [--version N]
   niinku compile  --combined PATH --output PATH [--jar PATH]
@@ -71,6 +71,7 @@ struct AssembleOpts {
     min_count: Count,
     freq_min: u8,
     freq_max: u8,
+    use_curated: bool,
     use_opensubtitles: bool,
     use_urbaani: bool,
     use_mastodon: bool,
@@ -91,6 +92,7 @@ impl Default for AssembleOpts {
             min_count: 5,
             freq_min: 100,
             freq_max: 220,
+            use_curated: true,
             use_opensubtitles: true,
             use_urbaani: true,
             use_mastodon: true,
@@ -134,6 +136,7 @@ fn parse_assemble_opts(args: &[String]) -> Result<AssembleOpts> {
                     .parse()
                     .context("--freq-max: not a u8")?
             }
+            "--no-curated" => opts.use_curated = false,
             "--no-opensubtitles" => opts.use_opensubtitles = false,
             "--no-urbaani" => opts.use_urbaani = false,
             "--no-mastodon" => opts.use_mastodon = false,
@@ -169,6 +172,28 @@ fn run_assemble(args: &[String]) -> Result<()> {
     let cached = opts.data_dir.join("cached");
 
     let mut tables: Vec<FreqTable> = Vec::new();
+    // Hand-vetted curated tokens are force-kept through the kirjakieli
+    // filter (folded into the allowlist below) so a known-good colloquial
+    // form lands even if libvoikko happens to accept it.
+    let mut curated_tokens: HashSet<String> = HashSet::new();
+    if opts.use_curated {
+        let path = opts.data_dir.join("curated-fi.txt");
+        if path.exists() {
+            eprintln!("loading curated seed list from {}", path.display());
+            let src = Curated::new(&path);
+            let t = src
+                .fetch()
+                .with_context(|| format!("source '{}' failed", src.name()))?;
+            eprintln!("  {} curated tokens", t.len());
+            curated_tokens.extend(t.iter().map(|(w, _)| w.clone()));
+            tables.push(t);
+        } else {
+            eprintln!(
+                "skipping curated: {} not present (use --no-curated to silence)",
+                path.display()
+            );
+        }
+    }
     if opts.use_opensubtitles {
         let path = cached.join("opensubtitles-fi.txt");
         eprintln!("loading opensubtitles-fi from {}", path.display());
@@ -221,8 +246,15 @@ fn run_assemble(args: &[String]) -> Result<()> {
 
     let denylist = read_optional_token_list(&opts.data_dir.join("denylist.txt"))?;
     eprintln!("denylist: {} entries", denylist.len());
-    let allowlist = read_optional_token_list(&opts.data_dir.join("allowlist.txt"))?;
-    eprintln!("allowlist: {} entries", allowlist.len());
+    let mut allowlist = read_optional_token_list(&opts.data_dir.join("allowlist.txt"))?;
+    let allowlist_file_n = allowlist.len();
+    allowlist.extend(curated_tokens);
+    eprintln!(
+        "allowlist: {} entries ({} from file + {} curated)",
+        allowlist.len(),
+        allowlist_file_n,
+        allowlist.len() - allowlist_file_n
+    );
 
     let merged = merge(tables);
     eprintln!("merged: {} tokens", merged.len());

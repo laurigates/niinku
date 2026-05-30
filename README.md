@@ -11,7 +11,8 @@ HeliBoard mechanism to consume it without manual re-imports.
 MVP. The pipeline crate's pure functions (merge, denylist, min-count,
 Voikko-based kirjakieli filter, log-scoring, `.combined` header + body
 emit) are implemented and unit-tested. The `assemble` CLI is wired
-end-to-end with the OpenSubtitles, Urbaani, and Mastodon adapters;
+end-to-end with the curated seed list and the OpenSubtitles, Urbaani,
+and Mastodon adapters;
 `ingest mastodon` pulls fresh Finnish posts from public hashtag
 streams; `compile` shells out to `dicttool_aosp.jar` to produce a
 HeliBoard-loadable `.dict`. Only the Suomi24 adapter remains stubbed.
@@ -105,6 +106,13 @@ cron-driven job.
 
 ### Sources (ranked by CI-friendliness)
 
+- **Curated seed list** (`data/curated-fi.txt`) — hand-vetted puhekieli
+  forms committed to the repo: pronoun/verb contractions (`mä`, `oon`),
+  reduced `-ks` question forms (`oliks`, `saaks`), and clitic chains
+  (`miksköhän`, `saakohan`). Unlike the fetched corpora it is always
+  present, so these forms are guaranteed in the output; assemble folds
+  every curated token into the allowlist so they survive the Voikko
+  filter even when libvoikko accepts the form. Grow it via PR.
 - **Urbaani Sanakirja** — curated slang headwords. Extract headwords only,
   not definitions.
 - **Mastodon public timeline** — Finnish-language posts via API, no auth.
@@ -167,6 +175,7 @@ it.
   /sources       # one adapter module per source
 /data
   /cached        # committed/cached frequency tables (Stage A output)
+  curated-fi.txt # hand-vetted puhekieli seed list (always-on source)
   allowlist.txt
   denylist.txt
 /.github/workflows

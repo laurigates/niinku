@@ -16,6 +16,7 @@ pub trait Source {
     fn fetch(&self) -> Result<FreqTable>;
 }
 
+pub mod curated;
 pub mod mastodon;
 pub mod mastodon_ingest;
 pub mod opensubtitles;
