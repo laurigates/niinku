@@ -1,0 +1,221 @@
+# Curated puhekieli/slang seed list for niinku.
+#
+# Hand-vetted colloquial Finnish forms that the kirjakieli `main_fi`
+# dictionary does not cover. Unlike the fetched corpora, this list is
+# committed, so every form below is guaranteed to land in the output
+# `.dict` (assemble force-keeps these through the Voikko filter via the
+# allowlist).
+#
+# Format: one entry per line, `word` or `word <weight>`. A bare word gets
+# the default baseline (1000); an explicit weight tiers high-frequency
+# function words above rarer forms after log-scoring. Lines starting with
+# `#` and blank lines are ignored.
+#
+# Only standard kirjakieli forms (e.g. `oliko`, `miksi`) are deliberately
+# omitted — those already ship in `main_fi`. We add the spoken variants.
+#
+# Keep entries lowercase. Add new forms via PR.
+
+##############################################################################
+# Pronouns — puhekieli forms and contractions
+##############################################################################
+
+mä 5000
+mää 3500
+sä 5000
+sää 3500
+tää 5000
+toi 3500
+nää 2500
+noi 2500
+nii 3000
+mun 5000
+sun 5000
+mut 3000
+sut 2500
+mua 3500
+sua 3500
+mulle 3000
+sulle 3000
+mulla 3000
+sulla 3000
+multa 2000
+sulta 2000
+mussa 1500
+sussa 1500
+meil 2000
+teil 1500
+meijän 2000
+meiän 2000
+teijän 1500
+teiän 1500
+niitten 1500
+
+##############################################################################
+# olla — spoken conjugation and contractions
+##############################################################################
+
+oon 5000
+oot 4000
+oonko 1800
+ootko 2200
+oonks 1500
+ootks 1500
+ooks 1800
+ois 3500
+oisin 2000
+oisit 1500
+oiski 1200
+oltais 1500
+oltii 1500
+emmä 2000
+emmää 1500
+etsä 1500
+
+##############################################################################
+# Common verb contractions
+##############################################################################
+
+meen 2500
+meet 1800
+mee 2500
+meenks 1200
+meetsä 1200
+tuun 2500
+tuut 1800
+tuu 2500
+tuutko 1200
+tuutsä 1200
+nään 1800
+näät 1200
+tiiän 2000
+tiiät 1500
+tiiäks 1500
+haluun 1800
+haluut 1200
+haluuks 1500
+haluutsä 1000
+kato 2500
+kattoo 2000
+kattoa 1200
+tehään 1500
+voiks 1800
+voitsä 1200
+
+##############################################################################
+# Reduced -ks question forms (puhekieli of -ko / -kö)
+##############################################################################
+
+onks 3000
+oliks 2500
+eiks 2500
+oisko 2000
+tuliks 1200
+saiks 1000
+meniks 1000
+näkyyks 1200
+kuuluuks 1200
+tuleeks 1500
+meneeks 1500
+saaks 2000
+tarviiks 1500
+kannattaaks 1500
+toimiiks 1200
+löytyyks 1200
+ehtiiks 1200
+jaksaaks 1500
+viittiiks 1200
+kestääks 1200
+riittääks 1200
+pääseeks 1200
+kerkeeks 1000
+mahtuuks 1000
+sopiiks 1000
+kelpaaks 1000
+maistuuks 1000
+muistaks 1200
+ymmärräks 1000
+kuuleks 1000
+
+##############################################################################
+# Clitic-chain pondering forms (-kö / -köhän / -kohan / -han / -pa)
+##############################################################################
+
+onkohan 1800
+oliskohan 1500
+olisikohan 1500
+tuliskohan 1200
+tulisikohan 1200
+tuleekohan 1200
+menisköhän 1200
+mahtaakohan 1200
+mahtaaks 1200
+saakohan 1500
+miksköhän 1500
+miksiköhän 1500
+mikskö 1500
+mitenköhän 1200
+missäköhän 1200
+mihinköhän 1200
+mistäköhän 1200
+minneköhän 1000
+koskakohan 1000
+kukakohan 1000
+mitäköhän 1200
+mikäköhän 1000
+milloinkohan 1000
+kuinkahan 1000
+montaks 1000
+paljonks 1500
+kauanks 1200
+
+##############################################################################
+# Puhekieli markers, fillers and reduced function words
+##############################################################################
+
+niinku 5000
+niinkun 2500
+niinkö 1200
+tota 2500
+sit 4000
+sitte 3000
+sitku 2000
+ku 3500
+et 3000
+vaa 2500
+just 2500
+kyl 3500
+juu 2000
+jooh 1500
+noh 2000
+vissii 1800
+varmaa 2000
+varmaan 2000
+kaippa 1200
+tietsä 1500
+kuule 1500
+oikeesti 2500
+semmonen 2000
+tollanen 1800
+tällänen 1800
+sellanen 2000
+millanen 1500
+millasta 1200
+mimmonen 1500
+
+##############################################################################
+# Slang greetings and very common informal words
+##############################################################################
+
+moro 2000
+morjens 1200
+moikka 1800
+heippa 1500
+terkku 1200
+läppä 1500
+fiilis 1500
+duuni 1500
+sori 2000
+joo 4000
+nojoo 1500
+aijaa 1200
