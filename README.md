@@ -42,7 +42,11 @@ just ingest-mastodon # pull Finnish hashtag posts → data/cached/mastodon-fi.tx
 just ingest        # pass through to the CLI (e.g. `just ingest mastodon --tags suomi`)
 ```
 
-The `.dict` file ships at `data/out/puhekieli_fi.dict`. To use it:
+Pre-built `.dict` files are attached to each
+[GitHub Release](https://github.com/laurigates/niinku/releases) as
+`puhekieli_fi-<version>.dict` (built automatically — see CI/CD below).
+You can also build one locally with `just generate`, which writes
+`data/out/puhekieli_fi.dict`. To use it:
 
 1. Transfer to an Android device that has HeliBoard installed.
 2. Settings → Languages → Finnish → "Add dictionary from file" → select the `.dict`.
@@ -164,8 +168,13 @@ it.
 - Scheduled `cron` (monthly suggested) runs Stage B.
 - The job does **not** auto-publish. It opens a PR containing the regenerated
   wordlist plus a diff of new-vs-removed entries. A human merges.
-- On merge, the compiled `.dict` is published as a GitHub Release artifact at
-  a stable URL (consumed by Workstream B).
+- Releases are cut by [Release Please](https://github.com/googleapis/release-please)
+  (`release.yml`): it maintains a release PR from Conventional Commits on
+  `main`; merging it tags the commit and creates a GitHub Release.
+- On release, `release.yml` compiles the `.dict` and attaches it (plus the
+  `.combined` source) to the release as a stable, versioned download
+  (consumed by Workstream B). Version bumps are driven by commit type
+  (`feat:` → minor, `fix:` → patch) — see [Conventional Commits](https://www.conventionalcommits.org).
 
 ### Repo layout
 
@@ -181,6 +190,7 @@ it.
 /.github/workflows
   ingest.yml     # Stage A, manual / version-triggered
   assemble.yml   # Stage B, cron + PR
+  release.yml    # Release Please + compile/publish .dict on release
   ci.yml         # fmt, clippy, test
 /tools
   dicttool_aosp.jar   # not yet vendored

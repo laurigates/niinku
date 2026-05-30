@@ -2,7 +2,7 @@ name: assemble dictionary
 
 # Stage B (lightweight): merge cached + live sources, filter, score, emit a
 # `.combined` wordlist; open a PR for human review. The compiled `.dict` is
-# produced from a merged PR by the release-dict workflow (not yet authored).
+# produced and published on release by release.yml (Release Please).
 
 on:
   schedule:
