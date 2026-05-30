@@ -131,4 +131,62 @@ mod tests {
         let t = read_curated(Cursor::new(data), 1000).unwrap();
         assert_eq!(t.get("miks"), 1500);
     }
+
+    /// Guards the committed seed list against the silent-summing footgun:
+    /// because [`read_curated`] *sums* duplicate tokens (see
+    /// [`duplicate_words_sum`]), a token accidentally listed twice in
+    /// `data/curated-fi.txt` would inflate its weight without any error. The
+    /// file is hand-edited and grows via PR, so assert every token is unique.
+    /// Also enforces the format invariants the header documents: lowercase
+    /// tokens and well-formed `word [<weight>]` lines.
+    #[test]
+    fn committed_seed_list_has_no_duplicates() {
+        use std::collections::HashMap;
+
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data/curated-fi.txt");
+        let text = std::fs::read_to_string(path).unwrap_or_else(|e| panic!("reading {path}: {e}"));
+
+        let mut seen: HashMap<String, usize> = HashMap::new();
+        let mut dups: Vec<String> = Vec::new();
+        let mut not_lowercase: Vec<String> = Vec::new();
+
+        for (i, line) in text.lines().enumerate() {
+            let trimmed = line.trim();
+            if trimmed.is_empty() || trimmed.starts_with('#') {
+                continue;
+            }
+            let mut parts = trimmed.split_whitespace();
+            let word = parts
+                .next()
+                .expect("non-empty line has a token")
+                .to_string();
+            // The optional second field must parse as a weight; anything else
+            // (e.g. a stray token) is a malformed line.
+            if let Some(w) = parts.next() {
+                w.parse::<Count>()
+                    .unwrap_or_else(|_| panic!("line {}: weight `{w}` is not a u64", i + 1));
+            }
+            assert!(
+                parts.next().is_none(),
+                "line {}: expected `word [<weight>]`, got extra fields: {trimmed:?}",
+                i + 1
+            );
+
+            if word != word.to_lowercase() {
+                not_lowercase.push(word.clone());
+            }
+            if let Some(first) = seen.insert(word.clone(), i + 1) {
+                dups.push(format!("`{word}` (lines {first} and {})", i + 1));
+            }
+        }
+
+        assert!(
+            not_lowercase.is_empty(),
+            "curated-fi.txt entries must be lowercase: {not_lowercase:?}"
+        );
+        assert!(
+            dups.is_empty(),
+            "duplicate tokens in curated-fi.txt (their weights would silently sum): {dups:?}"
+        );
+    }
 }

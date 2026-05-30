@@ -11,10 +11,20 @@
 # function words above rarer forms after log-scoring. Lines starting with
 # `#` and blank lines are ignored.
 #
-# Only standard kirjakieli forms (e.g. `oliko`, `miksi`) are deliberately
-# omitted — those already ship in `main_fi`. We add the spoken variants.
+# Weight tiers (keep the long tail from crowding suggestions as the list grows):
+#   function words   ~5000        — mä, sä, oon, sit, niinku, joo
+#   very common      ~2500–3500   — mää, tää, kyl, ku, oliks, yks
+#   common           ~1500–2000   — saaks, mul, sil, mentii, ootsä
+#   rare / long tail ~1000–1200   — ostaaks, kävisköhän, ostettii (baseline 1000)
 #
-# Keep entries lowercase. Add new forms via PR.
+# Only standard kirjakieli forms (e.g. `oliko`, `miksi`, `montako`) are
+# deliberately omitted — those already ship in `main_fi`. We add the spoken
+# variants. A handful of valid clitic chains Voikko accepts (e.g. `saakohan`,
+# `miksiköhän`, `montakohan`) are kept on purpose: the allowlist force-keeps
+# every curated token past the Voikko filter so these suggestible forms land.
+#
+# Keep entries lowercase, no duplicate tokens (duplicates silently sum — a
+# `cargo test` guards against it). Add new forms via PR.
 
 ##############################################################################
 # Pronouns — puhekieli forms and contractions
@@ -219,3 +229,177 @@ sori 2000
 joo 4000
 nojoo 1500
 aijaa 1200
+
+##############################################################################
+# More reduced -ks question forms (common verb stock)
+##############################################################################
+
+ostaaks 1200
+lähteeks 1200
+kirjotaks 1000
+soitaks 1000
+teeks 1200
+tekeeks 1200
+antaaks 1200
+ottaaks 1200
+pitääks 1500
+täytyyks 1200
+uskaltaaks 1000
+ehdiks 1200
+jääks 1200
+syöks 1000
+herääks 1000
+nukkuuks 1000
+kehtaaks 1000
+ilkeeks 1000
+raaskiiks 1000
+tarttiiks 1200
+alkaaks 1200
+loppuuks 1000
+aukeeks 1000
+auttaaks 1200
+kysyks 1000
+kysytääks 1000
+mennääks 1200
+käydääks 1200
+ollaaks 1200
+saadaaks 1200
+voidaaks 1200
+halutaaks 1000
+##############################################################################
+# Second-person -tsä agglutinations (verb + sä)
+##############################################################################
+
+ootsä 1500
+näätsä 1500
+tiiätsä 1500
+meinaatsä 1200
+muistatsä 1200
+kuuletsä 1200
+tuletsä 1200
+otatsä 1000
+sanotsä 1000
+oletsä 1200
+##############################################################################
+# -s clitic on interrogatives (puhekieli question particle)
+##############################################################################
+
+mikäs 1500
+missäs 1500
+mistäs 1200
+mihinkäs 1200
+kenes 1000
+koskas 1500
+minnes 1200
+mitens 1200
+mikses 1200
+montas 1000
+paljos 1200
+milläs 1000
+mitenkäs 1200
+##############################################################################
+# Conditional -skö / emphatic -pa clitic chains
+##############################################################################
+
+tekiskö 1200
+tekisköhän 1000
+käviskö 1200
+kävisköhän 1000
+näkisköhän 1000
+viittiskö 1200
+viittisköhän 1000
+kehtaiskö 1000
+sopisköhän 1000
+meniskö 1200
+tuliskö 1200
+olispa 1500
+oispa 1500
+tulispa 1200
+menispä 1200
+tekispä 1200
+tossapa 1200
+##############################################################################
+# Interrogative -kohan / -köhän paradigm completion
+# (Voikko accepts montakohan/paljonkohan/kauankohan/kenetköhän, like the
+#  seeded kukakohan/koskakohan/milloinkohan — force-kept as deliberate chains.)
+##############################################################################
+
+montakohan 1000
+paljonkohan 1000
+kauankohan 1000
+kenetköhän 1000
+kenelköhän 1000
+##############################################################################
+# Pronoun paradigm completion — reduced case forms (se/me/te/ne, demonstratives)
+##############################################################################
+
+muil 1500
+muist 1200
+noil 1500
+noist 1200
+niil 1500
+niilt 1200
+niist 1200
+niihi 1200
+sil 1800
+silt 1500
+mul 2000
+mult 1500
+sul 2000
+sult 1500
+sust 1200
+tos 1800
+tost 1500
+tohon 1500
+tähä 1500
+täl 1500
+tält 1200
+täst 1500
+näis 1200
+näist 1200
+ton 1500
+tonne 1500
+siihe 1500
+siit 1800
+siin 1800
+teijät 1200
+meijät 1500
+meiät 1200
+teiät 1000
+##############################################################################
+# olla / common-verb spoken passive conjugations (-tii past, -äis conditional)
+##############################################################################
+
+ollaa 1500
+tultii 1500
+mentii 1500
+nähtii 1500
+tehtii 1500
+juostii 1200
+syötii 1200
+käytii 1500
+saatii 1500
+päästii 1200
+otettii 1200
+annettii 1200
+sanottii 1200
+ostettii 1000
+mentäis 1200
+tultais 1200
+tehtäis 1200
+nähtäis 1200
+ostais 1000
+##############################################################################
+# Numerals — final-vowel droppers
+# (viis/kuus etc.: only forms main_fi omits are added; standard ones stay there.)
+##############################################################################
+
+yks 2500
+kaks 2500
+kol 1500
+nel 1500
+kuus 1500
+seittemä 1200
+kaheksa 1200
+yheksä 1200
+kymmene 1200
