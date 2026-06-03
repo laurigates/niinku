@@ -19,19 +19,39 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # The whole workspace links libvoikko at build time (crates/sources
+      # build.rs), and the assemble step runs the Voikko kirjakieli filter.
+      - name: install libvoikko + Finnish dictionary
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libvoikko-dev voikko-fi
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+      - uses: extractions/setup-just@v2
       - name: Restore cached frequency tables
         uses: actions/cache@v4
         with:
           path: data/cached
           key: niinku-cached-${{ hashFiles('data/cached/**') }}
           restore-keys: niinku-cached-
+      # assemble requires the OpenSubtitles frequency list; fetch it if the
+      # cache miss left it absent. Mastodon/urbaani are skipped when uncached.
+      - name: Download OpenSubtitles corpus
+        run: just download
       - name: Assemble wordlist
-        run: cargo run --release -p niinku-pipeline -- assemble
+        run: cargo run --release -p niinku-cli -- assemble --output data/wordlist.combined
+      # The default GITHUB_TOKEN cannot open PRs when the repo/org setting is
+      # off; reuse the Release Please App token (provisioned by gitops).
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.RELEASE_PLEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_PLEASE_PRIVATE_KEY }}
       - name: Open PR with regenerated wordlist
         uses: peter-evans/create-pull-request@v6
         with:
+          token: ${{ steps.app-token.outputs.token }}
           branch: auto/regenerate-wordlist
           title: "chore: regenerate puhekieli wordlist"
           body: |
