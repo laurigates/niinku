@@ -1,16 +1,22 @@
 name: ingest corpora
 
-# Stage A (heavy, manual): re-crunch one or more raw corpora into cached
-# per-source frequency tables under data/cached/. Run when a corpus version
-# changes or a new source adapter lands — not per-build.
+# Stage A (manual): pull fresh Finnish posts from Mastodon hashtag streams,
+# tokenise, and refresh data/cached/mastodon-fi.txt. The other sources are
+# not ingested through the CLI — opensubtitles is fetched with `just
+# download`; urbaani is a committed snapshot. Run when you want a newer
+# Mastodon sample, not per-build.
 
 on:
   workflow_dispatch:
     inputs:
-      sources:
-        description: "Comma-separated source names (opensubtitles,urbaani,mastodon,suomi24)"
-        required: true
-        default: "opensubtitles,urbaani"
+      instance:
+        description: "Mastodon instance host"
+        required: false
+        default: "mastodon.social"
+      count:
+        description: "Number of posts to fetch"
+        required: false
+        default: "1000"
 
 permissions:
   contents: write
@@ -20,14 +26,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # The workspace links libvoikko at build time (crates/sources build.rs).
+      - name: install libvoikko + Finnish dictionary
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libvoikko-dev voikko-fi
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - name: Ingest
+      - uses: extractions/setup-just@v2
+      - name: Ingest Mastodon
         env:
-          SOURCES: ${{ inputs.sources }}
-        run: cargo run --release -p niinku-pipeline -- ingest --sources "$SOURCES"
+          INSTANCE: ${{ inputs.instance }}
+          COUNT: ${{ inputs.count }}
+        run: just ingest-mastodon
       - name: Commit cached tables
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "chore(data): refresh cached frequency tables"
+          commit_message: "chore(data): refresh cached Mastodon frequency table"
           file_pattern: data/cached/*
