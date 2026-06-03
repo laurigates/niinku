@@ -7,7 +7,7 @@ edition = "2021"
 license = "MIT"
 repository = "https://github.com/laurigates/niinku"
 authors = ["Lauri Gates"]
-version = "0.0.1" # x-release-please-version
+version = "0.1.0" # x-release-please-version
 
 [workspace.dependencies]
 anyhow = "1"
