@@ -18,7 +18,7 @@ jobs:
   assemble:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.4.0
       # The whole workspace links libvoikko at build time (crates/sources
       # build.rs), and the assemble step runs the Voikko kirjakieli filter.
       - name: install libvoikko + Finnish dictionary
@@ -26,10 +26,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libvoikko-dev voikko-fi
       - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - uses: extractions/setup-just@v2
+      - uses: Swatinem/rust-cache@v2.9.2
+      - uses: extractions/setup-just@v2.0.0
       - name: Restore cached frequency tables
-        uses: actions/cache@v4
+        uses: actions/cache@v4.3.0
         with:
           path: data/cached
           key: niinku-cached-${{ hashFiles('data/cached/**') }}
@@ -44,12 +44,12 @@ jobs:
       # off; reuse the Release Please App token (provisioned by gitops).
       - name: Generate GitHub App token
         id: app-token
-        uses: actions/create-github-app-token@v3
+        uses: actions/create-github-app-token@v3.2.0
         with:
           app-id: ${{ vars.RELEASE_PLEASE_APP_ID }}
           private-key: ${{ secrets.RELEASE_PLEASE_PRIVATE_KEY }}
       - name: Open PR with regenerated wordlist
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@v6.1.0
         with:
           token: ${{ steps.app-token.outputs.token }}
           branch: auto/regenerate-wordlist
