@@ -11,11 +11,11 @@ build = "build.rs"
 anyhow.workspace = true
 thiserror.workspace = true
 voikko-rs.workspace = true
-unicode-segmentation = "1.13"
+unicode-segmentation = "=1.13.2"
 serde.workspace = true
 serde_json.workspace = true
 ureq.workspace = true
 niinku-pipeline = { path = "../pipeline" }
 
 [build-dependencies]
-pkg-config = "0.3"
+pkg-config = "=0.3.33"
