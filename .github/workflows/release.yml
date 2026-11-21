@@ -61,7 +61,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "17.0.21+9"
       - name: build .combined + compile .dict
         # Downloads the OpenSubtitles corpus + dicttool jar, assembles the
         # wordlist (always includes the committed curated seed; Mastodon is
